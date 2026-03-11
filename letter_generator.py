@@ -143,7 +143,7 @@ def generate_html_letter(student_name, roll_number, gender):
         <p>To whomsoever, it may concern</p>
         <div class="letter-body">
             <p>{pronouns['salutation']},</p>
-            <p>This is to certify that <strong>{student_name}</strong> (Roll No: {roll_number}) is a bonafide student of Symbiosis Institute of Media and Communication, Pune. {pronouns['pronoun']} is pursuing MA (Journalism and Media Industries).</p>
+            <p>This is to certify that <strong>{student_name}</strong> (PRN: {roll_number}) is a bonafide student of Symbiosis Institute of Media and Communication, Pune. {pronouns['pronoun']} is pursuing MA (Journalism and Media Industries).</p>
             <p>As a part of the curriculum, students are expected to do an internship training at a media organisation. The institute has no objection to {pronouns['possessive'].lower()} internship training at your prestigious news organization.</p>
             <p>Thank You</p>
         </div>
@@ -164,11 +164,11 @@ def send_email(student_name, roll_number, gender):
         msg['From'] = GMAIL_ADDRESS
         msg['To'] = RECIPIENT_EMAIL
         msg['Date'] = formatdate(localtime=True)
-        msg['Subject'] = f"Internship Letter for {student_name} (Roll No: {roll_number})"
+        msg['Subject'] = f"Internship Letter for {student_name} (PRN: {roll_number})"
 
         plain_text = f"""Dear Sir/Madam,
 
-Internship letter request for {pronouns['title']} {student_name} (Roll No: {roll_number}).
+Internship letter request for {pronouns['title']} {student_name} (PRN: {roll_number}).
 
 Please find the letter below and issue it to the student mentioned.
 
@@ -195,8 +195,8 @@ st.markdown('<p class="subtitle">Symbiosis Institute of Media and Communication<
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
 with st.form("letter_form"):
-    student_name = st.text_input("Student Full Name", placeholder="e.g. Rahul Sharma")
-    roll_number  = st.text_input("Roll Number", placeholder="e.g. SIMC2024001")
+    student_name = st.text_input("Student Full Name", placeholder="Enter your full name")
+    roll_number  = st.text_input("PRN", placeholder="Enter your PRN")
     gender       = st.selectbox("Gender", ["-- Select Gender --", "Male", "Female", "Other"])
 
     submitted = st.form_submit_button("Generate & Send Letter")
