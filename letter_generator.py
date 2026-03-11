@@ -19,7 +19,7 @@ ADDRESS2 = "Post: Lavale, Tal: Mulshi, District: Pune"
 
 # Page config
 st.set_page_config(
-    page_title="Internship Letter Generator",
+    page_title="Application for Internship Letter",
     page_icon="📄",
     layout="centered"
 )
@@ -190,7 +190,7 @@ Symbiosis Institute of Media and Communication"""
 
 # ── UI ──────────────────────────────────────────────────────────────────────
 
-st.markdown("# 📄 Internship Letter Generator")
+st.markdown("# 📄 Application for Internship Letter")
 st.markdown('<p class="subtitle">Symbiosis Institute of Media and Communication</p>', unsafe_allow_html=True)
 st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
@@ -217,3 +217,4 @@ if submitted:
             )
         else:
             st.markdown(f'<div class="error-box">❌ {message}</div>', unsafe_allow_html=True)
+
