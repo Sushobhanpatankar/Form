@@ -1,11 +1,9 @@
-from flask import Flask, render_template, request, jsonify
+import streamlit as st
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.utils import formatdate
 from datetime import datetime
-
-app = Flask(__name__)
 
 # Gmail configuration
 GMAIL_ADDRESS = "sushobhan.patankar@simc.edu"
@@ -19,160 +17,155 @@ FROM_TITLE = "Professor and Deputy Director"
 ADDRESS = "Symbiosis International University"
 ADDRESS2 = "Post: Lavale, Tal: Mulshi, District: Pune"
 
+# Page config
+st.set_page_config(
+    page_title="Internship Letter Generator",
+    page_icon="📄",
+    layout="centered"
+)
+
+# Custom CSS for a clean, professional look
+st.markdown("""
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@300;400;600&display=swap');
+
+        html, body, [class*="css"] {
+            font-family: 'Source Sans 3', sans-serif;
+        }
+        .main {
+            background-color: #f8f6f1;
+        }
+        .block-container {
+            padding-top: 2rem;
+            max-width: 680px;
+        }
+        h1 {
+            font-family: 'Playfair Display', serif !important;
+            color: #1a1a2e !important;
+            font-size: 2rem !important;
+        }
+        .subtitle {
+            color: #666;
+            font-size: 0.95rem;
+            margin-top: -10px;
+            margin-bottom: 30px;
+        }
+        .stTextInput > label, .stSelectbox > label {
+            font-weight: 600;
+            color: #333;
+        }
+        .success-box {
+            background: #e8f5e9;
+            border-left: 4px solid #2e7d32;
+            padding: 16px 20px;
+            border-radius: 6px;
+            color: #1b5e20;
+            font-weight: 500;
+        }
+        .error-box {
+            background: #ffebee;
+            border-left: 4px solid #c62828;
+            padding: 16px 20px;
+            border-radius: 6px;
+            color: #b71c1c;
+            font-weight: 500;
+        }
+        .letter-preview {
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 32px;
+            font-family: 'Source Sans 3', sans-serif;
+            font-size: 13.5px;
+            line-height: 1.8;
+            color: #222;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+        }
+        .stButton > button {
+            background-color: #1a1a2e;
+            color: white;
+            border: none;
+            padding: 0.6rem 2rem;
+            font-size: 1rem;
+            border-radius: 6px;
+            font-family: 'Source Sans 3', sans-serif;
+            font-weight: 600;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .stButton > button:hover {
+            background-color: #2d2d5e;
+            color: white;
+        }
+        .divider {
+            border: none;
+            border-top: 1px solid #e0e0e0;
+            margin: 24px 0;
+        }
+    </style>
+""", unsafe_allow_html=True)
+
+
 def get_pronouns(gender):
-    """Return pronouns and salutation based on gender"""
-    if gender.lower() == "male":
-        return {
-            "pronoun": "He",
-            "possessive": "His",
-            "salutation": "Dear Sir",
-            "title": "Mr."
-        }
-    elif gender.lower() == "female":
-        return {
-            "pronoun": "She",
-            "possessive": "Her",
-            "salutation": "Dear Madam",
-            "title": "Ms."
-        }
+    if gender == "Male":
+        return {"pronoun": "He", "possessive": "His", "salutation": "Dear Sir", "title": "Mr."}
+    elif gender == "Female":
+        return {"pronoun": "She", "possessive": "Her", "salutation": "Dear Madam", "title": "Ms."}
     else:
-        return {
-            "pronoun": "They",
-            "possessive": "Their",
-            "salutation": "Dear Sir/Madam",
-            "title": "Mr./Ms."
-        }
+        return {"pronoun": "They", "possessive": "Their", "salutation": "Dear Sir/Madam", "title": "Mr./Ms."}
+
 
 def generate_html_letter(student_name, roll_number, gender):
-    """Generate HTML letter with personalized content"""
     pronouns = get_pronouns(gender)
     current_date = datetime.now().strftime("%d %B %Y")
 
     html_content = f"""
-    <html>
-    <head>
-        <style>
-            body {{
-                font-family: 'Calibri', 'Arial', sans-serif;
-                line-height: 1.6;
-                margin: 0;
-                padding: 20px;
-                color: #333;
-            }}
-            .letter-container {{
-                max-width: 8.5in;
-                height: 11in;
-                margin: 0 auto;
-                padding: 40px;
-                background: white;
-                box-shadow: 0 0 10px rgba(0,0,0,0.1);
-            }}
-            .header-section {{
-                display: flex;
-                justify-content: space-between;
-                margin-bottom: 30px;
-                font-size: 13px;
-            }}
-            .from-section {{
-                width: 60%;
-            }}
-            .date-section {{
-                width: 35%;
-                text-align: right;
-            }}
-            .from-section strong,
-            .date-section strong {{
-                font-weight: bold;
-                display: block;
-                margin-bottom: 5px;
-            }}
-            .greeting {{
-                margin-top: 30px;
-                margin-bottom: 20px;
-                font-size: 13px;
-            }}
-            .letter-body {{
-                font-size: 13px;
-                line-height: 1.8;
-                margin-bottom: 20px;
-                text-align: justify;
-            }}
-            .letter-body p {{
-                margin: 15px 0;
-            }}
-            .signature {{
-                margin-top: 40px;
-                font-size: 13px;
-            }}
-            .signature-name {{
-                margin-top: 40px;
-                font-weight: bold;
-            }}
-            .signature-title {{
-                margin-top: 3px;
-            }}
-            .institution {{
-                margin-top: 5px;
-                font-size: 12px;
-                color: #555;
-            }}
-        </style>
-    </head>
+    <html><head><style>
+        body {{ font-family: Calibri, Arial, sans-serif; line-height: 1.6; padding: 20px; color: #333; }}
+        .header-section {{ display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 13px; }}
+        .from-section {{ width: 60%; }}
+        .date-section {{ width: 35%; text-align: right; }}
+        .letter-body {{ font-size: 13px; line-height: 1.8; text-align: justify; }}
+        .letter-body p {{ margin: 15px 0; }}
+        .signature {{ margin-top: 40px; font-size: 13px; }}
+        .signature-name {{ margin-top: 40px; font-weight: bold; }}
+    </style></head>
     <body>
-        <div class="letter-container">
-            <div class="header-section">
-                <div class="from-section">
-                    <strong>From</strong>
-                    {FROM_NAME}<br>
-                    {FROM_TITLE}<br>
-                    {INSTITUTION_NAME}<br>
-                    {ADDRESS}<br>
-                    {ADDRESS2}
-                </div>
-                <div class="date-section">
-                    <strong>Date</strong>
-                    {current_date}
-                </div>
+        <div class="header-section">
+            <div class="from-section">
+                <strong>From</strong><br>
+                {FROM_NAME}<br>{FROM_TITLE}<br>{INSTITUTION_NAME}<br>{ADDRESS}<br>{ADDRESS2}
             </div>
-
-            <div class="greeting">
-                To whomsoever, it may concern
-            </div>
-
-            <div class="letter-body">
-                <p>{pronouns['salutation']},</p>
-
-                <p>This is to certify that <strong>{student_name}</strong> (Roll No: {roll_number}) is a bonafide student of Symbiosis Institute of Media and Communication, Pune. {pronouns['pronoun']} is pursuing MA (Journalism and Media Industries).</p>
-
-                <p>As a part of the curriculum, students are expected to do an internship training at a media organisation. The institute has no objection to {pronouns['possessive'].lower()} internship training at your prestigious news organization.</p>
-
-                <p>Thank You</p>
-            </div>
-
-            <div class="signature">
-                <div class="signature-name">{FROM_NAME}</div>
-                <div class="signature-title">{FROM_TITLE}</div>
-                <div class="institution">{INSTITUTION_NAME}</div>
+            <div class="date-section">
+                <strong>Date</strong><br>{current_date}
             </div>
         </div>
-    </body>
-    </html>
+        <p>To whomsoever, it may concern</p>
+        <div class="letter-body">
+            <p>{pronouns['salutation']},</p>
+            <p>This is to certify that <strong>{student_name}</strong> (Roll No: {roll_number}) is a bonafide student of Symbiosis Institute of Media and Communication, Pune. {pronouns['pronoun']} is pursuing MA (Journalism and Media Industries).</p>
+            <p>As a part of the curriculum, students are expected to do an internship training at a media organisation. The institute has no objection to {pronouns['possessive'].lower()} internship training at your prestigious news organization.</p>
+            <p>Thank You</p>
+        </div>
+        <div class="signature">
+            <div class="signature-name">{FROM_NAME}</div>
+            <div>{FROM_TITLE}</div>
+            <div style="color:#555;font-size:12px;">{INSTITUTION_NAME}</div>
+        </div>
+    </body></html>
     """
     return html_content
 
+
 def send_email(student_name, roll_number, gender):
-    """Send email with HTML letter"""
     try:
         pronouns = get_pronouns(gender)
-
-        # Create email
         msg = MIMEMultipart('alternative')
         msg['From'] = GMAIL_ADDRESS
         msg['To'] = RECIPIENT_EMAIL
         msg['Date'] = formatdate(localtime=True)
         msg['Subject'] = f"Internship Letter for {student_name} (Roll No: {roll_number})"
 
-        # Email body - notification to recipient
         plain_text = f"""Dear Sir/Madam,
 
 Internship letter request for {pronouns['title']} {student_name} (Roll No: {roll_number}).
@@ -182,63 +175,45 @@ Please find the letter below and issue it to the student mentioned.
 Best regards,
 Symbiosis Institute of Media and Communication"""
 
-        # Generate HTML letter
         html_letter = generate_html_letter(student_name, roll_number, gender)
-
-        # Attach email body
         msg.attach(MIMEText(plain_text, 'plain'))
         msg.attach(MIMEText(html_letter, 'html'))
 
-        # Send email
         server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
         server.send_message(msg)
         server.quit()
-
         return True, "Email sent successfully!"
     except Exception as e:
         return False, f"Error sending email: {str(e)}"
 
-@app.route('/')
-def index():
-    """Render the form"""
-    return render_template('index.html')
 
-@app.route('/generate', methods=['POST'])
-def generate():
-    """Handle form submission"""
-    try:
-        data = request.get_json()
-        student_name = data.get('student_name', '').strip()
-        roll_number = data.get('roll_number', '').strip()
-        gender = data.get('gender', '').strip()
+# ── UI ──────────────────────────────────────────────────────────────────────
 
-        # Validation
-        if not student_name or not roll_number or not gender:
-            return jsonify({
-                'success': False,
-                'message': 'Please fill in all fields'
-            }), 400
+st.markdown("# 📄 Internship Letter Generator")
+st.markdown('<p class="subtitle">Symbiosis Institute of Media and Communication</p>', unsafe_allow_html=True)
+st.markdown('<hr class="divider">', unsafe_allow_html=True)
 
-        # Send email with HTML letter
-        success, message = send_email(student_name, roll_number, gender)
+with st.form("letter_form"):
+    student_name = st.text_input("Student Full Name", placeholder="e.g. Rahul Sharma")
+    roll_number  = st.text_input("Roll Number", placeholder="e.g. SIMC2024001")
+    gender       = st.selectbox("Gender", ["Male", "Female", "Other"])
+
+    submitted = st.form_submit_button("Generate & Send Letter")
+
+if submitted:
+    if not student_name.strip() or not roll_number.strip():
+        st.markdown('<div class="error-box">⚠️ Please fill in all fields before submitting.</div>', unsafe_allow_html=True)
+    else:
+        with st.spinner("Generating and sending your letter..."):
+            success, message = send_email(student_name.strip(), roll_number.strip(), gender)
 
         if success:
-            return jsonify({
-                'success': True,
-                'message': f'Letter sent successfully to {RECIPIENT_EMAIL}!'
-            })
+            st.markdown(
+                f'<div class="success-box">✅ Your request has been submitted successfully!<br><br>'
+                f'Your internship letter will be ready for collection from the institute <strong>tomorrow or the next working day</strong>. '
+                f'Please visit the office during working hours to collect it.</div>',
+                unsafe_allow_html=True
+            )
         else:
-            return jsonify({
-                'success': False,
-                'message': message
-            }), 500
-
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': f'Error: {str(e)}'
-        }), 500
-
-if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+            st.markdown(f'<div class="error-box">❌ {message}</div>', unsafe_allow_html=True)
