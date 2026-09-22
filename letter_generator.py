@@ -1,219 +1,163 @@
-import streamlit as st
-import smtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
-from email.utils import formatdate
+import io
 from datetime import datetime
 
-# Gmail configuration
-GMAIL_ADDRESS = "sushobhan.patankar@simc.edu"
-GMAIL_PASSWORD = "uwmh unpe sota efdg"
-RECIPIENT_EMAIL = "sushobhan.patankar@simc.edu"
+import streamlit as st
+from reportlab.lib.enums import TA_JUSTIFY
+from reportlab.lib.pagesizes import A4
+from reportlab.lib.styles import ParagraphStyle, getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 
-# Institution details
 INSTITUTION_NAME = "Symbiosis Institute of Media and Communication"
 FROM_NAME = "Sushobhan Patankar"
 FROM_TITLE = "Professor and Deputy Director"
 ADDRESS = "Symbiosis International University"
 ADDRESS2 = "Post: Lavale, Tal: Mulshi, District: Pune"
 
-# Page config
 st.set_page_config(
-    page_title="Internship Letter Generator",
+    page_title="SIMC Internship Letter Generator",
     page_icon="📄",
-    layout="centered"
+    layout="centered",
 )
 
-# Custom CSS for a clean, professional look
-st.markdown("""
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Source+Sans+3:wght@300;400;600&display=swap');
-
-        html, body, [class*="css"] {
-            font-family: 'Source Sans 3', sans-serif;
-        }
-        .main {
-            background-color: #f8f6f1;
-        }
-        .block-container {
-            padding-top: 2rem;
-            max-width: 680px;
-        }
-        h1 {
-            font-family: 'Playfair Display', serif !important;
-            color: #1a1a2e !important;
-            font-size: 2rem !important;
-        }
-        .subtitle {
-            color: #666;
-            font-size: 0.95rem;
-            margin-top: -10px;
-            margin-bottom: 30px;
-        }
-        .stTextInput > label, .stSelectbox > label {
-            font-weight: 600;
-            color: #333;
-        }
-        .success-box {
-            background: #e8f5e9;
-            border-left: 4px solid #2e7d32;
-            padding: 16px 20px;
-            border-radius: 6px;
-            color: #1b5e20;
-            font-weight: 500;
-        }
-        .error-box {
-            background: #ffebee;
-            border-left: 4px solid #c62828;
-            padding: 16px 20px;
-            border-radius: 6px;
-            color: #b71c1c;
-            font-weight: 500;
-        }
-        .letter-preview {
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            padding: 32px;
-            font-family: 'Source Sans 3', sans-serif;
-            font-size: 13.5px;
-            line-height: 1.8;
-            color: #222;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.07);
-        }
-        .stButton > button {
-            background-color: #1a1a2e;
-            color: white;
-            border: none;
-            padding: 0.6rem 2rem;
-            font-size: 1rem;
-            border-radius: 6px;
-            font-family: 'Source Sans 3', sans-serif;
-            font-weight: 600;
-            width: 100%;
-            transition: background 0.2s;
-        }
-        .stButton > button:hover {
-            background-color: #2d2d5e;
-            color: white;
-        }
-        .divider {
-            border: none;
-            border-top: 1px solid #e0e0e0;
-            margin: 24px 0;
-        }
-    </style>
-""", unsafe_allow_html=True)
-
-
-def get_pronouns(gender):
-    if gender == "Male":
-        return {"pronoun": "He", "possessive": "His", "salutation": "Dear Sir", "title": "Mr."}
-    elif gender == "Female":
-        return {"pronoun": "She", "possessive": "Her", "salutation": "Dear Madam", "title": "Ms."}
-    else:
-        return {"pronoun": "They", "possessive": "Their", "salutation": "Dear Sir/Madam", "title": "Mr./Ms."}
-
-
-def generate_html_letter(student_name, roll_number, gender):
-    pronouns = get_pronouns(gender)
-    current_date = datetime.now().strftime("%d %B %Y")
-
-    html_content = f"""
-    <html><head><style>
-        body {{ font-family: Calibri, Arial, sans-serif; line-height: 1.6; padding: 20px; color: #333; }}
-        .header-section {{ display: flex; justify-content: space-between; margin-bottom: 30px; font-size: 13px; }}
-        .from-section {{ width: 60%; }}
-        .date-section {{ width: 35%; text-align: right; }}
-        .letter-body {{ font-size: 13px; line-height: 1.8; text-align: justify; }}
-        .letter-body p {{ margin: 15px 0; }}
-        .signature {{ margin-top: 40px; font-size: 13px; }}
-        .signature-name {{ margin-top: 40px; font-weight: bold; }}
-    </style></head>
-    <body>
-        <div class="header-section">
-            <div class="from-section">
-                <strong>From</strong><br>
-                {FROM_NAME}<br>{FROM_TITLE}<br>{INSTITUTION_NAME}<br>{ADDRESS}<br>{ADDRESS2}
-            </div>
-            <div class="date-section">
-                <strong>Date</strong><br>{current_date}
-            </div>
-        </div>
-        <p>To whomsoever, it may concern</p>
-        <div class="letter-body">
-            <p>{pronouns['salutation']},</p>
-            <p>This is to certify that <strong>{student_name}</strong> (PRN: {roll_number}) is a bonafide student of Symbiosis Institute of Media and Communication, Pune. {pronouns['pronoun']} is pursuing MA (Journalism and Media Industries).</p>
-            <p>As a part of the curriculum, students are expected to do an internship training at a media organisation. The institute has no objection to {pronouns['possessive'].lower()} internship training at your prestigious news organization.</p>
-            <p>Thank You</p>
-        </div>
-        <div class="signature">
-            <div class="signature-name">{FROM_NAME}</div>
-            <div>{FROM_TITLE}</div>
-            <div style="color:#555;font-size:12px;">{INSTITUTION_NAME}</div>
-        </div>
-    </body></html>
+st.markdown(
     """
-    return html_content
+    <style>
+    .block-container { max-width: 700px; padding-top: 2rem; }
+    .letter-note {
+        padding: 12px 16px; border-radius: 8px;
+        background: #f4f4f4; margin-bottom: 20px;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
 
-def send_email(student_name, roll_number, gender):
-    try:
-        pronouns = get_pronouns(gender)
-        msg = MIMEMultipart('alternative')
-        msg['From'] = GMAIL_ADDRESS
-        msg['To'] = RECIPIENT_EMAIL
-        msg['Date'] = formatdate(localtime=True)
-        msg['Subject'] = f"Internship Letter for {student_name} (PRN: {roll_number})"
-
-        plain_text = f"""Dear Sir/Madam,
-
-Internship letter request for {pronouns['title']} {student_name} (PRN: {roll_number}).
-
-Please find the letter below and issue it to the student mentioned.
-
-Best regards,
-Symbiosis Institute of Media and Communication"""
-
-        html_letter = generate_html_letter(student_name, roll_number, gender)
-        msg.attach(MIMEText(plain_text, 'plain'))
-        msg.attach(MIMEText(html_letter, 'html'))
-
-        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
-        server.login(GMAIL_ADDRESS, GMAIL_PASSWORD)
-        server.send_message(msg)
-        server.quit()
-        return True, "Email sent successfully!"
-    except Exception as e:
-        return False, f"Error sending email: {str(e)}"
+def pronouns(gender):
+    if gender == "Male":
+        return "He", "His", "Mr."
+    if gender == "Female":
+        return "She", "Her", "Ms."
+    return "They", "Their", "Mr./Ms."
 
 
-# ── UI ──────────────────────────────────────────────────────────────────────
+def build_pdf(student_name, prn, gender):
+    pronoun, possessive, title = pronouns(gender)
+    date = datetime.now().strftime("%d %B %Y")
 
-st.markdown("# 📄 Internship Letter Generator")
-st.markdown('<p class="subtitle">Symbiosis Institute of Media and Communication</p>', unsafe_allow_html=True)
-st.markdown('<hr class="divider">', unsafe_allow_html=True)
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=22 * mm,
+        leftMargin=22 * mm,
+        topMargin=20 * mm,
+        bottomMargin=20 * mm,
+        title=f"Internship Letter - {student_name}",
+        author=FROM_NAME,
+    )
+
+    styles = getSampleStyleSheet()
+    normal = ParagraphStyle(
+        "LetterBody",
+        parent=styles["Normal"],
+        fontName="Helvetica",
+        fontSize=11,
+        leading=18,
+        spaceAfter=12,
+        alignment=TA_JUSTIFY,
+    )
+    small = ParagraphStyle(
+        "Small",
+        parent=normal,
+        fontSize=10,
+        leading=14,
+        alignment=0,
+    )
+    right = ParagraphStyle(
+        "Right",
+        parent=small,
+        alignment=2,
+    )
+
+    story = [
+        Paragraph(
+            f"<b>From</b><br/>{FROM_NAME}<br/>{FROM_TITLE}<br/>"
+            f"{INSTITUTION_NAME}<br/>{ADDRESS}<br/>{ADDRESS2}",
+            small,
+        ),
+        Paragraph(f"<b>Date</b><br/>{date}", right),
+        Spacer(1, 12),
+        Paragraph("To whomsoever, it may concern", normal),
+        Paragraph(f"{'Dear Sir' if gender == 'Male' else 'Dear Madam' if gender == 'Female' else 'Dear Sir/Madam'},", normal),
+        Paragraph(
+            f"This is to certify that <b>{student_name}</b> (PRN: {prn}) is a "
+            f"bonafide student of Symbiosis Institute of Media and Communication, Pune. "
+            f"{pronoun} is pursuing MA (Journalism and Media Industries).",
+            normal,
+        ),
+        Paragraph(
+            f"As a part of the curriculum, students are expected to do an internship "
+            f"training at a media organisation. The institute has no objection to "
+            f"{possessive.lower()} internship training at your prestigious news organization.",
+            normal,
+        ),
+        Paragraph("Thank You", normal),
+        Spacer(1, 30),
+        Paragraph(f"<b>{FROM_NAME}</b><br/>{FROM_TITLE}<br/>{INSTITUTION_NAME}", small),
+    ]
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer.getvalue()
+
+
+st.title("📄 Internship Letter Generator")
+st.caption("Symbiosis Institute of Media and Communication")
+
+st.markdown(
+    '<div class="letter-note">Enter your details below. Your internship letter will be generated as a PDF for immediate download.</div>',
+    unsafe_allow_html=True,
+)
 
 with st.form("letter_form"):
-    student_name = st.text_input("Student Full Name", placeholder="Enter your full name")
-    roll_number  = st.text_input("PRN", placeholder="Enter your PRN")
-    gender       = st.selectbox("Gender", ["-- Select Gender --", "Male", "Female", "Other"])
-
-    submitted = st.form_submit_button("Generate & Send Letter")
+    student_name = st.text_input(
+        "Student Full Name",
+        placeholder="Enter your full name",
+    )
+    prn = st.text_input(
+        "PRN",
+        placeholder="Enter your PRN",
+    )
+    gender = st.selectbox(
+        "Gender",
+        ["-- Select Gender --", "Male", "Female", "Other"],
+    )
+    submitted = st.form_submit_button("Generate Letter", use_container_width=True)
 
 if submitted:
-    if not student_name.strip() or not roll_number.strip() or gender == "-- Select Gender --":
-        st.markdown('<div class="error-box">⚠️ Please fill in all fields before submitting.</div>', unsafe_allow_html=True)
-    else:
-        with st.spinner("Generating and sending your letter..."):
-            success, message = send_email(student_name.strip(), roll_number.strip(), gender)
+    student_name = student_name.strip()
+    prn = prn.strip()
 
-        if success:
-            st.markdown(
-                f'<div class="success-box">✅ Your request has been submitted successfully!<br><br>'
-                f'Your internship letter will be ready for collection from the institute <strong>tomorrow or the next working day</strong>. '
-                f'Please visit the office during working hours to collect it.</div>',
-                unsafe_allow_html=True
-            )
-        else:
-            st.markdown(f'<div class="error-box">❌ {message}</div>', unsafe_allow_html=True)
+    if not student_name or not prn or gender == "-- Select Gender --":
+        st.error("Please fill in all the fields.")
+    else:
+        pdf = build_pdf(student_name, prn, gender)
+        filename = f"Internship_Letter_{prn.replace(' ', '_')}.pdf"
+
+        st.success("Your internship letter has been generated successfully.")
+        st.download_button(
+            "⬇️ Download Internship Letter (PDF)",
+            data=pdf,
+            file_name=filename,
+            mime="application/pdf",
+            use_container_width=True,
+        )
+
+        with st.expander("Preview details"):
+            st.write(f"**Student:** {student_name}")
+            st.write(f"**PRN:** {prn}")
+            st.write(f"**Gender:** {gender}")
+
+st.caption("Please check the details carefully before downloading the letter.")
